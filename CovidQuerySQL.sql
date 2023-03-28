@@ -1,5 +1,11 @@
-﻿--creates Table covid_deaths
-CREATE TABLE [dbo].[covid_deaths] (
+﻿/*
+Covid 19-23 data set 
+Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Data Types
+*/
+
+
+--creates Table covid_deaths
+CREATE TABLE Covid_Deaths (
 [iso_code] nvarchar(255),
 [continent] nvarchar(255),
 [location] nvarchar(255),
@@ -28,7 +34,7 @@ CREATE TABLE [dbo].[covid_deaths] (
 [weekly_hosp_admissions_per_million] nvarchar(255)
 )
 --creates covid_vactionations tables
-CREATE TABLE [dbo].[covid_vaccinations] (
+CREATE TABLE covid_Vaccionations (
 [iso_code] nvarchar(255),
 [continent] nvarchar(255),
 [location] nvarchar(255),
@@ -78,19 +84,19 @@ CREATE TABLE [dbo].[covid_vaccinations] (
 
 
 --import from csv file
---LOAD DATA LOCAL INFILE  
-----'e: datasets\covid_deaths.csv '
---INTO TABLE covid_deaths  
---FIELDS TERMINATED BY ',' 
---ENCLOSED BY '"'
+LOAD DATA LOCAL INFILE  
+'File Path'
+INTO TABLE covid_deaths  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
 
 
 --import from csv file
---LOAD DATA LOCAL INFILE  
-----'e: datasets\covid_vaccinations.csv '
---INTO TABLE covid_deaths  
---FIELDS TERMINATED BY ',' 
---ENCLOSED BY '"'
+LOAD DATA LOCAL INFILE  
+'filePath'
+INTO TABLE covid_deaths  
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
 
 
 
@@ -117,6 +123,7 @@ from PortfolioProject..Covid_Deaths
 where location like '%states%'
 group by location,date, population,total_cases
 
+
 --LOOKING AT MOST INFECTON RATES COMPARED TO  POPULATION
 select 
 location, population, MAX(total_cases) as HighestInfectionCount, MAX(isnull(((total_cases/nullif(population,0))*100),0)) as percentofPopulationInfection
@@ -124,6 +131,7 @@ from PortfolioProject..Covid_Deaths
 --where location like '%states%'
 group by location, population,total_cases
 order by  percentofPopulationInfection desc
+
 
 --How many people died? highest death count per poulation
 select 
@@ -157,13 +165,14 @@ from PortfolioProject..covid_deaths
 where continent is not null
 group by date
 
---global death percentage
+--global death percentage by continent
 select sum(new_cases) as total_cases, SUM(cast(new_deaths as bigint)) as total_deaths,
 isnull((SUM(cast(new_deaths as bigint))/nullif(sum(new_cases),0)*100),0) as deathPercentage
 from PortfolioProject..covid_deaths
 where continent is not null
 
 --total population vs vacinoations
+--percentage of population that has a vaccine shot using cte
 with PopvsVac (continent, location,date,population,new_vaccinations,RollingPeopleVaccinated)
 as
 (
@@ -179,9 +188,8 @@ where dea.continent is not null
 )
 select *, (RollingPeopleVaccinated/population)*100
 from PopvsVac
---Use CTE
 
---temp table
+--temp table for calulations for partition by
 drop table if exists  #percentPopulatationVaccinated
 create table #percentPopulatationVaccinated
 (
@@ -192,16 +200,15 @@ population numeric,
 new_vaccinations numeric,
 RollingPeopleVaccinated numeric
 )
+
 insert into #percentPopulatationVaccinated
 select dea.continent, dea.location,dea.date,dea.population,vac.new_vaccinations 
 , SUM(cast(vac.new_vaccinations as bigint)) over (partition by dea.location order by dea.location,dea.date) as RollingPeopleVaccinated
-
 from PortfolioProject.. Covid_Deaths dea
 join PortfolioProject.. Covid_Vaccinations vac
 	on dea.location = vac.location
 	and dea.date = vac.date
 --where dea.continent is not null
-
 select *, (RollingPeopleVaccinated/population)*100
 from #percentPopulatationVaccinated
 
@@ -214,3 +221,31 @@ join PortfolioProject.. Covid_Vaccinations vac
 	on dea.location = vac.location
 	and dea.date = vac.date
 where dea.continent is not null
+
+
+
+
+--tables moved to tableau
+--table 2
+select location, sum(cast(new_deaths as bigint)) as TotalDeathCount
+from PortfolioProject.. Covid_Deaths
+where continent is null
+and location not in ('World', 'European Union','International','Lower middle income','Upper middle income','High income', 'Low income')
+group by location
+order by TotalDeathCount desc
+
+--table 3
+select 
+location, population,MAX(total_cases) as HighesInfectionCount ,isnull(((total_cases/nullif(population,0))*100),0) as percentofPopulation
+from PortfolioProject..Covid_Deaths
+
+group by location, population, total_cases
+order by percentofPopulation desc
+
+--Table 4
+select 
+location,population, date,MAX(total_cases) as HighesInfectionCount ,isnull(((total_cases/nullif(population,0))*100),0) as percentofPopulation
+from PortfolioProject..Covid_Deaths
+
+group by location,date, population,total_cases
+order by percentofPopulation desc

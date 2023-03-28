@@ -1,6 +1,7 @@
 ﻿/*
 Covid 19-23 data set 
 Joins, CTE's, Temp Tables, Windows Functions, Aggregate Functions, Creating Views, Converting Data Types
+https://public.tableau.com/views/CovidDataSet_16799670069770/Dashboard1?:language=en-US&:display_count=n&:origin=viz_share_link
 */
 
 
